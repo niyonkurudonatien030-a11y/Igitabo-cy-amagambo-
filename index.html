@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Igitabo cy’Amagambo – Kinyarwanda Science Terms</title>
+<style>
+:root{--bg:#fbf8f5;--card:#fff;--text:#1d1b1a;--muted:#7a716b;--coral:#e8553d;--line:#eadfd8;--chip:#fdece8}
+@media (prefers-color-scheme:dark){:root{--bg:#161413;--card:#201d1c;--text:#f3ece8;--muted:#9d928b;--coral:#ff7a63;--line:#332e2c;--chip:#2c1f1c}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{position:sticky;top:0;z-index:5;background:var(--bg);padding:10px 12px 8px;border-bottom:1px solid var(--line)}
+#q{width:100%;font-size:17px;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--text);outline:none}
+#q:focus{border-color:var(--coral)}
+#crumbs{font-size:13px;color:var(--muted);margin-top:8px;display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+#crumbs a{color:var(--coral);cursor:pointer;font-weight:600}
+main{max-width:860px;margin:0 auto;padding:10px 12px 80px}
+.item{display:block;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin:8px 0;cursor:pointer}
+.item:active{border-color:var(--coral)}
+.item small{display:block;color:var(--muted);margin-top:3px}
+.item b{font-size:16px}
+.row{padding:12px 4px;border-bottom:1px solid var(--line)}
+.en{font-size:24px;font-weight:800;color:var(--coral);line-height:1.2;margin-right:12px}
+.alts{display:inline}
+.alt{font-size:13px;font-weight:700;margin-right:10px;cursor:pointer;white-space:nowrap}
+.alt i{font-style:normal;font-weight:500;color:var(--muted)}
+.alt:hover{color:var(--coral)}
+.path{font-size:12px;color:var(--muted);margin-top:3px}
+.empty{color:var(--muted);text-align:center;padding:40px 0}
+#sheet{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:2px solid var(--coral);padding:16px 16px 22px;transform:translateY(110%);transition:transform .2s;z-index:10;max-height:55vh;overflow:auto;border-radius:16px 16px 0 0}
+#sheet.open{transform:none}
+#sheet h2{margin:0 0 4px;font-size:22px;color:var(--coral)}
+#sheet p{margin:6px 0;font-size:15px}
+#sheet .lab{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+#close{position:absolute;right:14px;top:10px;background:var(--chip);border:0;color:var(--text);border-radius:50%;width:32px;height:32px;font-size:16px}
+.more{display:block;margin:14px auto;padding:10px 18px;border-radius:10px;border:1px solid var(--coral);background:none;color:var(--coral);font-weight:700}
+</style>
+</head>
+<body>
+<header>
+  <input id="q" type="search" placeholder="Search English or Kinyarwanda…" autocomplete="off">
+  <div id="crumbs"></div>
+</header>
+<main id="main"></main>
+<div id="sheet"><button id="close" aria-label="Close">✕</button><div id="sheetbody"></div></div>
+<script src="data.js"></script>
+<script>
+const D = window.GLOSSARY;
+const $ = id => document.getElementById(id);
+const main = $('main'), crumbs = $('crumbs'), q = $('q');
+const norm = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[’'`]/g,"'");
+function el(tag, cls, text){ const e=document.createElement(tag); if(cls) e.className=cls; if(text!=null) e.textContent=text; return e; }
+
+// Flat index for search
+const IDX = [];
+D.forEach((t,ti)=>t.c.forEach((c,ci)=>c.u.forEach((u,ui)=>u.k.forEach(k=>{
+  IDX.push({k, t, c, u, ti, ci, ui, key: norm(k[0]), words: norm(k[2].map(a=>a[0]+' '+a[5]).join(' '))});
+}))));
+
+function wordRow(k, pathText){
+  const r = el('div','row');
+  r.appendChild(el('span','en',k[0]));
+  const a = el('span','alts');
+  k[2].forEach(alt=>{
+    const s = el('span','alt', alt[0]);
+    if(alt[5] && alt[5] !== '—'){ s.appendChild(document.createTextNode(' ')); s.appendChild(el('i',null,'/ '+alt[5])); }
+    s.onclick = ()=>openSheet(k, alt);
+    a.appendChild(s);
+  });
+  r.appendChild(a);
+  if(pathText) r.appendChild(el('div','path',pathText));
+  return r;
+}
+
+function openSheet(k, alt){
+  const b = $('sheetbody'); b.textContent='';
+  b.appendChild(el('h2',null,alt[0]+(alt[5]?' / '+alt[5]:'')));
+  b.appendChild(el('div','lab',k[0] + (k[1] ? ' · ' + k[1] : '')));
+  if(alt[3]){ b.appendChild(el('p','lab','Ibisobanuro')); b.appendChild(el('p',null,alt[3])); }
+  if(alt[4]){ b.appendChild(el('p','lab','Test sentence')); b.appendChild(el('p',null,alt[4])); }
+  if(alt[1]) b.appendChild(el('p',null,'Verb: '+alt[1]));
+  if(alt[2]) b.appendChild(el('p','lab','Confidence: '+alt[2]));
+  $('sheet').classList.add('open');
+}
+$('close').onclick = ()=>$('sheet').classList.remove('open');
+
+function crumbBar(parts){
+  crumbs.textContent='';
+  parts.forEach((p,i)=>{
+    if(i) crumbs.appendChild(document.createTextNode(' › '));
+    if(p.go){ const a=el('a',null,p.t); a.onclick=p.go; crumbs.appendChild(a); }
+    else crumbs.appendChild(el('span',null,p.t));
+  });
+}
+function card(title, sub, fn){
+  const c = el('div','item'); c.appendChild(el('b',null,title)); if(sub) c.appendChild(el('small',null,sub)); c.onclick=fn; return c;
+}
+const countT = t => t.c.reduce((n,c)=>n+c.u.reduce((m,u)=>m+u.k.length,0),0);
+const countC = c => c.u.reduce((m,u)=>m+u.k.length,0);
+
+function showTopics(){
+  location.hash=''; q.value='';
+  crumbBar([{t:'All topics'}]); main.textContent='';
+  D.forEach((t,ti)=>main.appendChild(card(t.t, t.c.length+' chapters · '+countT(t).toLocaleString()+' words', ()=>showTopic(ti))));
+  window.scrollTo(0,0);
+}
+function showTopic(ti){
+  const t=D[ti]; location.hash='t'+ti; q.value='';
+  crumbBar([{t:'All topics',go:showTopics},{t:t.t}]); main.textContent='';
+  t.c.forEach((c,ci)=>main.appendChild(card(c.n, c.u.length+' units · '+countC(c).toLocaleString()+' words', ()=>showChapter(ti,ci))));
+  window.scrollTo(0,0);
+}
+function showChapter(ti,ci){
+  const t=D[ti], c=t.c[ci]; location.hash='t'+ti+'-'+ci; q.value='';
+  crumbBar([{t:'All topics',go:showTopics},{t:t.t,go:()=>showTopic(ti)},{t:c.n}]); main.textContent='';
+  c.u.forEach((u,ui)=>main.appendChild(card(u.code+' · '+u.n, u.k.length+' words', ()=>showUnit(ti,ci,ui))));
+  if(!c.u.length) main.appendChild(el('div','empty','No units in this chapter.'));
+  window.scrollTo(0,0);
+}
+function showUnit(ti,ci,ui){
+  const t=D[ti], c=t.c[ci], u=c.u[ui]; location.hash='t'+ti+'-'+ci+'-'+ui; q.value='';
+  crumbBar([{t:'All topics',go:showTopics},{t:t.t,go:()=>showTopic(ti)},{t:c.n,go:()=>showChapter(ti,ci)},{t:u.code+' '+u.n}]);
+  main.textContent='';
+  const frag = document.createDocumentFragment();
+  u.k.forEach(k=>frag.appendChild(wordRow(k)));
+  main.appendChild(frag);
+  window.scrollTo(0,0);
+}
+
+let shown = 0, results = [];
+function renderResults(){
+  const frag = document.createDocumentFragment();
+  results.slice(shown, shown+60).forEach(x=>frag.appendChild(wordRow(x.k, x.t.t+' › '+x.c.n+' › '+x.u.code+' '+x.u.n)));
+  shown = Math.min(results.length, shown+60);
+  const old = main.querySelector('.more'); if(old) old.remove();
+  main.appendChild(frag);
+  if(shown < results.length){ const m=el('button','more','Show more ('+(results.length-shown)+' left)'); m.onclick=renderResults; main.appendChild(m); }
+}
+function search(text){
+  const n = norm(text.trim());
+  if(!n){ route(); return; }
+  const a=[], b=[], c=[];
+  for(const x of IDX){
+    if(x.key===n || x.key.startsWith(n)) a.push(x);
+    else if(x.key.includes(n)) b.push(x);
+    else if(x.words.includes(n)) c.push(x);
+  }
+  results = a.concat(b, c); shown = 0;
+  crumbBar([{t:'All topics',go:showTopics},{t:results.length.toLocaleString()+' results for “'+text.trim()+'”'}]);
+  main.textContent='';
+  if(!results.length) main.appendChild(el('div','empty','No match. Try another spelling.'));
+  else renderResults();
+}
+let timer; q.addEventListener('input', ()=>{ clearTimeout(timer); timer=setTimeout(()=>search(q.value),150); });
+
+function route(){
+  const h = location.hash.slice(1);
+  const m = h.match(/^t(\d+)(?:-(\d+))?(?:-(\d+))?$/);
+  if(m){
+    const ti=+m[1], ci=m[2]!=null?+m[2]:null, ui=m[3]!=null?+m[3]:null;
+    if(D[ti]){
+      if(ci==null) return showTopic(ti);
+      if(D[ti].c[ci]){ if(ui==null) return showChapter(ti,ci); if(D[ti].c[ci].u[ui]) return showUnit(ti,ci,ui); }
+    }
+  }
+  showTopics();
+}
+window.addEventListener('hashchange', ()=>{ if(!q.value) route(); });
+route();
+</script>
+</body>
+</html>
